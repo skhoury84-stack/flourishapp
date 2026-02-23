@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#6b3a2a"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"/>
+<title>Bake Orders</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --cream: #fdf6ee; --warm: #f5e6d3; --rose: #c0392b; --rose-light: #e8a89c;
+    --brown: #6b3a2a; --brown-light: #9e6b5a; --text: #2c1a10; --text-muted: #8b6a5a;
+    --card: #fffaf5; --border: #e8d5c4; --green: #2d6a4f; --green-light: #d8f3dc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; }
+
+  header { background: var(--brown); color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(44,26,16,0.2); }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 1.5rem; }
+  .settings-btn { background: rgba(255,255,255,0.15); border: none; color: white; border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .settings-btn:hover { background: rgba(255,255,255,0.25); }
+
+  .tabs { display: flex; background: var(--warm); border-bottom: 2px solid var(--border); overflow-x: auto; }
+  .tab { flex: 1; min-width: 60px; padding: 10px 4px; text-align: center; font-size: 0.73rem; font-weight: 600; color: var(--brown-light); cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+  .tab.active { color: var(--rose); border-bottom-color: var(--rose); background: var(--cream); }
+
+  main { padding: 16px; max-width: 600px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(107,58,42,0.06); }
+  .card h2 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--brown); margin-bottom: 4px; }
+  .card p.subtitle { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px; }
+
+  textarea, input[type="text"], input[type="password"], input[type="date"], input[type="number"], select {
+    width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 10px 14px;
+    font-size: 0.93rem; font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); outline: none; transition: border-color 0.2s;
+  }
+  textarea:focus, input:focus, select:focus { border-color: var(--rose-light); }
+  textarea { resize: vertical; min-height: 90px; }
+  select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239e6b5a' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+  label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--brown-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; margin-top: 12px; }
+  label:first-child { margin-top: 0; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 11px 20px; border-radius: 10px; font-size: 0.92rem; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: var(--rose); color: white; width: 100%; justify-content: center; margin-top: 14px; }
+  .btn-primary:hover { background: #a93226; }
+  .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-secondary { background: var(--warm); color: var(--brown); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-success { background: var(--green); color: white; }
+  .btn-sm { padding: 6px 12px; font-size: 0.8rem; border-radius: 7px; }
+  .btn-danger { background: #fee; color: var(--rose); border: 1px solid #fcc; }
+
+  .or-divider { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 0.8rem; margin: 14px 0; }
+  .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  #recipe-match-banner { display: none; background: var(--green-light); border: 1px solid #b7e4c7; border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; font-size: 0.85rem; color: var(--green); font-weight: 600; }
+
+  #parsed-preview { display: none; }
+  .parsed-field { margin-bottom: 10px; }
+  .parsed-field label { margin-top: 0; }
+
+  /* ---- AUTOCOMPLETE ---- */
+  .ac-wrap { position: relative; flex: 1; }
+  .ac-wrap.unit-wrap { flex: 0 0 90px; }
+  .ac-input { width: 100%; }
+  .ac-dropdown {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--card); border: 2px solid var(--rose-light); border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(107,58,42,0.12); z-index: 500; max-height: 200px; overflow-y: auto;
+  }
+  .ac-dropdown.open { display: block; }
+  .ac-item {
+    padding: 9px 14px; font-size: 0.88rem; cursor: pointer; color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:hover, .ac-item.highlighted { background: var(--warm); }
+  .ac-item.new-item { color: var(--rose); font-weight: 600; }
+
+  /* ---- INGREDIENT ROW ---- */
+  .ingredient-row { display: flex; gap: 6px; margin-bottom: 8px; align-items: flex-start; }
+  .ingredient-row input[type="number"] { flex: 0 0 70px; }
+  .remove-ing { background: none; border: none; color: var(--rose); font-size: 1.1rem; cursor: pointer; padding: 10px 4px; flex-shrink: 0; }
+  .add-ing-btn { font-size: 0.8rem; color: var(--rose); background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; padding: 4px 0; margin-top: 4px; }
+
+  /* ---- ORDERS ---- */
+  .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 6px rgba(107,58,42,0.05); }
+  .order-card.completed { opacity: 0.6; }
+  .order-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .order-name { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--brown); }
+  .order-client { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+  .order-notes { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; font-style: italic; }
+  .order-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .badge { font-size: 0.72rem; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: var(--warm); color: var(--brown-light); border: 1px solid var(--border); white-space: nowrap; }
+  .badge.due-soon { background: #fff3cd; color: #856404; border-color: #ffc107; }
+  .badge.overdue { background: #fee; color: var(--rose); border-color: #fcc; }
+  .badge.done { background: var(--green-light); color: var(--green); border-color: #b7e4c7; }
+
+  /* ---- RECIPES ---- */
+  .recipe-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .recipe-name { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--brown); }
+  .recipe-yield { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+  .recipe-ing-list { font-size: 0.82rem; color: var(--text-muted); margin-top: 6px; line-height: 1.7; }
+  .recipe-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  /* ---- SHOPPING ---- */
+  .shop-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .shop-item:last-child { border-bottom: none; }
+  .shop-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--rose); flex-shrink: 0; }
+  .shop-item.checked span { text-decoration: line-through; color: var(--text-muted); }
+  .shop-item span { flex: 1; font-size: 0.93rem; }
+  .shop-item .order-tag { font-size: 0.72rem; color: var(--text-muted); }
+
+  /* ---- LIBRARY TAB ---- */
+  .lib-section-title { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--brown); margin-bottom: 10px; }
+  .lib-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .lib-item:last-child { border-bottom: none; }
+  .lib-item span { flex: 1; font-size: 0.9rem; }
+  .lib-item input[type="text"] { flex: 1; padding: 6px 10px; font-size: 0.88rem; }
+  .lib-add-row { display: flex; gap: 8px; margin-top: 12px; }
+  .lib-add-row input { flex: 1; }
+  .lib-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--warm); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px 4px 12px; font-size: 0.82rem; margin: 3px; }
+  .lib-tag button { background: none; border: none; color: var(--brown-light); cursor: pointer; font-size: 0.9rem; padding: 0; line-height: 1; }
+  .lib-tag button:hover { color: var(--rose); }
+  .lib-tags-wrap { display: flex; flex-wrap: wrap; margin-top: 8px; }
+
+  /* ---- MODALS ---- */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(44,26,16,0.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--card); border-radius: 18px; padding: 24px; max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(44,26,16,0.2); }
+  .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--brown); margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .modal-actions .btn { flex: 1; justify-content: center; }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-btn { font-size: 0.78rem; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--warm); color: var(--brown-light); cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; }
+  .filter-btn.active { background: var(--rose); color: white; border-color: var(--rose); }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+  .scale-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .scale-row label { margin: 0; white-space: nowrap; flex-shrink: 0; }
+  .scale-row input { flex: 1; }
+
+  /* PRICE COMPARISON */
+  .store-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .store-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .store-name { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--brown); }
+  .store-total { font-size: 0.9rem; font-weight: 700; color: var(--green); }
+  .store-total.highest { color: var(--rose); }
+  .price-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+  .price-row:last-child { border-bottom: none; }
+  .price-row .ing-name { color: var(--text); flex: 1; }
+  .price-row .price { font-weight: 600; color: var(--brown); white-space: nowrap; margin-left: 10px; }
+  .price-row .price.best { color: var(--green); }
+  .best-badge { font-size: 0.68rem; background: var(--green-light); color: var(--green); border: 1px solid #b7e4c7; border-radius: 10px; padding: 2px 6px; margin-left: 6px; font-weight: 700; }
+  .price-disclaimer { font-size: 0.75rem; color: var(--text-muted); text-align: center; padding: 8px; }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--brown); color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.88rem; font-weight: 500; z-index: 1000; transition: transform 0.3s ease; pointer-events: none; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ===== MOBILE OPTIMIZATIONS ===== */
+
+  /* Prevent iOS zoom on input focus */
+  @media (max-width: 768px) {
+    textarea, input[type="text"], input[type="password"],
+    input[type="date"], input[type="number"], select {
+      font-size: 16px !important; /* prevents iOS auto-zoom */
+    }
+
+    /* Larger tap targets */
+    .btn { min-height: 48px; }
+    .btn-sm { min-height: 40px; padding: 8px 14px; }
+    .tab { min-height: 48px; padding: 12px 4px; }
+    .remove-ing { min-width: 36px; min-height: 36px; }
+    .add-ing-btn { min-height: 40px; font-size: 0.9rem; }
+    .filter-btn { min-height: 36px; padding: 8px 14px; }
+
+    /* Stack ingredient rows better on small screens */
+    .ingredient-row { flex-wrap: nowrap; gap: 4px; }
+    .ingredient-row input[type="number"] { flex: 0 0 60px; }
+    .ac-wrap.unit-wrap { flex: 0 0 80px; }
+
+    /* Bigger order action buttons */
+    .order-actions { gap: 6px; }
+    .order-actions .btn-sm { flex: 1; justify-content: center; font-size: 0.78rem; }
+
+    /* Full width modal on mobile */
+    .modal-overlay { padding: 0; align-items: flex-end; }
+    .modal {
+      border-radius: 20px 20px 0 0;
+      max-height: 92vh;
+      width: 100%;
+      padding: 24px 20px 40px; /* extra bottom padding for home indicator */
+    }
+
+    /* Modal actions stack on small screens */
+    .modal-actions { flex-wrap: wrap; }
+    .modal-actions .btn { min-height: 48px; }
+
+    /* Bigger checkboxes on shopping list */
+    .shop-item input[type="checkbox"] { width: 22px; height: 22px; }
+    .shop-item { padding: 12px 0; }
+
+    /* Recipe/order cards touch friendly */
+    .recipe-card, .order-card { padding: 16px; }
+
+    /* Main content padding */
+    main { padding: 12px; }
+
+    /* Header */
+    header { padding: 14px 16px; }
+    header h1 { font-size: 1.3rem; }
+
+    /* Autocomplete dropdown bigger items */
+    .ac-item { padding: 12px 14px; font-size: 0.95rem; }
+
+    /* Library tags bigger */
+    .lib-tag { padding: 6px 12px 6px 14px; font-size: 0.88rem; margin: 4px; }
+    .lib-tag button { font-size: 1.1rem; padding: 2px; }
+
+    /* Scale row on recipe picker */
+    .scale-row { flex-wrap: wrap; }
+    .scale-row input { min-width: 70px; }
+
+    /* Or divider */
+    .or-divider { margin: 10px 0; }
+
+    /* Fix textarea min height */
+    textarea { min-height: 80px; }
+
+    /* Parsed preview form spacing */
+    .parsed-field { margin-bottom: 8px; }
+
+    /* Bottom safe area for iPhone */
+    body { padding-bottom: env(safe-area-inset-bottom); }
+    .tabs { padding-bottom: 0; }
+  }
+
+  /* Smooth scrolling on iOS */
+  * { -webkit-overflow-scrolling: touch; }
+  .modal { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .ac-dropdown { -webkit-overflow-scrolling: touch; }
+
+  /* Remove tap highlight on iOS */
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* Active states for touch */
+  .btn:active { opacity: 0.8; transform: scale(0.98); }
+  .tab:active { opacity: 0.7; }
+  .order-card:active { opacity: 0.95; }
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.4rem">🧁</span>
+  <h1>Bake Orders</h1>
+  <button class="settings-btn" onclick="openSettings()">⚙️ Settings</button>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('new-order')">+ Order</button>
+  <button class="tab" onclick="showTab('orders')">Orders</button>
+  <button class="tab" onclick="showTab('shopping')">Shopping</button>
+  <button class="tab" onclick="showTab('recipes')">Recipes</button>
+  <button class="tab" onclick="showTab('library')">Library</button>
+</div>
+
+<main>
+
+  <!-- NEW ORDER -->
+  <div id="new-order" class="section active">
+    <div class="card">
+      <h2>Paste Client Message</h2>
+      <p class="subtitle">Claude reads it and fills in the order details automatically.</p>
+      <textarea id="client-msg" placeholder="Hi! I'd love to order 2 dozen chocolate chip cookies for my daughter's birthday on March 15th. She's allergic to nuts. — Sarah"></textarea>
+      <button class="btn btn-primary" id="parse-btn" onclick="parseMessage()">
+        <span id="parse-btn-text">✨ Parse with AI</span>
+      </button>
+    </div>
+
+    <div class="or-divider">or use a saved recipe</div>
+
+    <div class="card">
+      <h2>Use Recipe Library</h2>
+      <p class="subtitle">Select a recipe to pre-fill ingredients, scaled to quantity.</p>
+      <label>Recipe</label>
+      <select id="recipe-select" onchange="onRecipeSelect()">
+        <option value="">— Select a recipe —</option>
+      </select>
+      <div id="recipe-scale-row" style="display:none;">
+        <div class="scale-row">
+          <label>Quantity</label>
+          <input type="number" id="recipe-qty-num" value="1" min="0.25" step="0.25" style="width:80px;"/>
+          <span id="recipe-qty-unit" style="font-size:0.82rem; color:var(--text-muted); white-space:nowrap;"></span>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="use-recipe-btn" onclick="useRecipe()" style="display:none;">Use This Recipe →</button>
+    </div>
+
+    <div id="parsed-preview">
+      <div class="card">
+        <h2>Review Order Details</h2>
+        <p class="subtitle">Edit anything before saving.</p>
+        <div id="recipe-match-banner">🍪 Matched recipe from your library — ingredients auto-filled!</div>
+
+        <div class="parsed-field">
+          <label>Client Name</label>
+          <input type="text" id="f-client" placeholder="Client name"/>
+        </div>
+        <div class="parsed-field">
+          <label>Order / Item</label>
+          <input type="text" id="f-item" placeholder="What was ordered"/>
+        </div>
+        <div class="parsed-field">
+          <label>Quantity</label>
+          <input type="text" id="f-qty" placeholder="e.g. 2 dozen"/>
+        </div>
+        <div class="parsed-field">
+          <label>Due Date</label>
+          <input type="date" id="f-date"/>
+        </div>
+        <div class="parsed-field">
+          <label>Special Notes</label>
+          <input type="text" id="f-notes" placeholder="Allergies, flavors, decorations..."/>
+        </div>
+        <div class="parsed-field">
+          <label>Ingredients</label>
+          <div id="ingredients-list"></div>
+          <button class="add-ing-btn" onclick="addIngredientRow('ingredients-list')">+ Add ingredient</button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="cancelParse()">Cancel</button>
+          <button class="btn btn-primary" style="flex:2; margin-top:0;" onclick="saveOrder()">💾 Save Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div id="orders" class="section">
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="setFilter('active',this)">Active</button>
+      <button class="filter-btn" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" onclick="setFilter('completed',this)">Completed</button>
+    </div>
+    <div id="orders-list"></div>
+  </div>
+
+  <!-- SHOPPING -->
+  <div id="shopping" class="section">
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h2>Shopping List</h2>
+          <p class="subtitle" style="margin-bottom:0;">Ingredients from all active orders</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="copyShoppingList()">Copy</button>
+          <button class="btn btn-secondary btn-sm" id="price-btn" onclick="comparePrices()">💰 Compare Prices</button>
+        </div>
+      </div>
+    </div>
+    <div id="shopping-list"></div>
+    <div id="price-results" style="display:none;">
+      <div class="card" style="margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2>Price Comparison</h2>
+          <span style="font-size:0.75rem; color:var(--text-muted);">AI estimates · prices may vary</span>
+        </div>
+        <p class="subtitle" style="margin-bottom:0;">Organized by store — shop where it makes sense</p>
+      </div>
+      <div id="store-lists"></div>
+    </div>
+  </div>
+
+  <!-- RECIPES -->
+  <div id="recipes" class="section">
+    <button class="btn btn-primary" style="margin-bottom:16px;" onclick="openRecipeModal()">+ New Recipe</button>
+    <div id="recipes-list"></div>
+  </div>
+
+  <!-- LIBRARY -->
+  <div id="library" class="section">
+    <div class="card">
+      <div class="lib-section-title">🥣 Ingredients</div>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">These appear as autocomplete suggestions when building recipes.</p>
+      <div class="lib-tags-wrap" id="ing-tags"></div>
+      <div class="lib-add-row">
+        <input type="text" id="new-ing-input" placeholder="Add ingredient..." onkeydown="if(event.key==='Enter')addLibItem('ingredient')"/>
+        <button class="btn btn-secondary btn-sm" onclick="addLibItem('ingredient')">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="lib-section-title">📏 Units</div>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">These appear as autocomplete suggestions for ingredient units.</p>
+      <div class="lib-tags-wrap" id="unit-tags"></div>
+      <div class="lib-add-row">
+        <input type="text" id="new-unit-input" placeholder="Add unit..." onkeydown="if(event.key==='Enter')addLibItem('unit')"/>
+        <button class="btn btn-secondary btn-sm" onclick="addLibItem('unit')">Add</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <h2>⚙️ Settings</h2>
+    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">The AI connection is managed securely on the server — no API key needed here.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeSettings()">Close</button>
+    </div>
+    <hr style="margin:20px 0; border:none; border-top:1px solid var(--border);">
+    <button class="btn btn-danger btn-sm" onclick="exportCSV()">📥 Export Orders CSV</button>
+    <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Back up all orders as a spreadsheet.</p>
+  </div>
+</div>
+
+<!-- VIEW ORDER MODAL -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal">
+    <h2 id="view-title"></h2>
+    <div id="view-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeViewModal()">Close</button>
+      <button class="btn btn-secondary" id="view-save-btn" onclick="saveViewEdits()">💾 Save</button>
+      <button class="btn btn-secondary" id="view-cal-btn" onclick="addToCalendar(viewingOrderId)">📅 Calendar</button>
+      <button class="btn btn-success" id="view-complete-btn">✓ Mark Complete</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECIPE MODAL -->
+<div class="modal-overlay" id="recipe-modal">
+  <div class="modal">
+    <h2 id="recipe-modal-title">New Recipe</h2>
+
+    <div style="background:var(--warm); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:16px;">
+      <label style="margin-top:0;">📋 Paste Ingredient List</label>
+      <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px;">Copy the ingredients from any recipe and paste them here — Claude will parse and match them automatically.</p>
+      <textarea id="rm-paste-text" placeholder="1 cup flour&#10;2 eggs&#10;1/2 tsp baking soda&#10;1 cup sugar..." style="min-height:90px; margin-bottom:8px;"></textarea>
+      <button class="btn btn-primary" onclick="importFromPaste()" style="margin-top:0; font-size:0.85rem; padding:9px 16px;">✨ Parse Ingredients</button>
+      <div id="rm-fetch-status" style="font-size:0.78rem; margin-top:8px; display:none;"></div>
+
+      <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border);">
+        <label style="margin-top:0; font-size:0.72rem;">🔗 Or import from URL (may be blocked by some sites)</label>
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <input type="text" id="rm-url" placeholder="https://..." style="flex:1; font-size:0.85rem; padding:8px 12px;"/>
+          <button class="btn btn-secondary btn-sm" id="rm-fetch-btn" onclick="importFromUrl()" style="white-space:nowrap; flex-shrink:0;">Import</button>
+        </div>
+      </div>
+    </div>
+
+    <label style="margin-top:0;">Recipe Name</label>
+    <input type="text" id="rm-name" placeholder="e.g. Chocolate Chip Cookies"/>
+    <label>Base Yield</label>
+    <div style="display:flex; gap:8px; margin-top:5px;">
+      <input type="number" id="rm-yield-num" value="1" min="0.25" step="0.25" style="width:90px;"/>
+      <input type="text" id="rm-yield-unit" placeholder="dozen / pieces / cake..." style="flex:1;"/>
+    </div>
+    <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Ingredients below are for this base yield — they auto-scale when ordering.</p>
+    <label style="margin-top:14px;">Ingredients</label>
+    <div id="rm-ingredients"></div>
+    <button class="add-ing-btn" onclick="addIngredientRow('rm-ingredients')">+ Add ingredient</button>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeRecipeModal()">Cancel</button>
+      <button class="btn btn-primary" style="margin-top:0;" onclick="saveRecipe()">Save Recipe</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+
+// ========== API HELPER ==========
+async function callClaude(payload) {
+  let res;
+  try {
+    res = await fetch('https://flourishassistant.skhoury84.workers.dev/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch(networkErr) {
+    throw new Error('Network error — check your internet connection. (' + networkErr.message + ')');
+  }
+
+  const rawText = await res.text();
+  console.log('Claude API response status:', res.status);
+  console.log('Claude API raw response:', rawText.slice(0, 500));
+
+  if (!res.ok) {
+    let msg = 'Server error ' + res.status;
+    try { const j = JSON.parse(rawText); msg = j.error?.message || j.message || msg; } catch(e) {}
+    throw new Error(msg);
+  }
+
+  let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch(e) {
+    throw new Error('Invalid JSON from server: ' + rawText.slice(0, 200));
+  }
+
+  if (data.error) throw new Error(data.error.message);
+  return data;
+}
+
+// ========== SUPABASE ==========
+const SUPABASE_URL = 'https://dqhyhyufbvmpmpcduqud.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxaHloeXVmYnZtcG1wY2R1cXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTc1MjksImV4cCI6MjA4NzI3MzUyOX0.ygJrIWgxMTx3hjQ8Aqc5S43w4BISg8AmN_w4G2v_UJY';
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || '',
+      ...options.headers,
+    },
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(err.message || res.statusText);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+// ---- ORDERS ----
+async function getOrders() {
+  try {
+    const data = await sbFetch('orders?order=date.asc');
+    return data || [];
+  } catch(e) { console.error('getOrders:', e); return JSON.parse(localStorage.getItem('bake_orders') || '[]'); }
+}
+async function saveOrderDb(order) {
+  await sbFetch('orders', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates',
+    headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({
+      id: order.id, client: order.client, item: order.item,
+      quantity: order.quantity, date: order.date, notes: order.notes,
+      ingredients: order.ingredients, completed: order.completed, created: order.created
+    })
+  });
+}
+async function updateOrder(order) {
+  await sbFetch('orders?id=eq.' + order.id, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      client: order.client, item: order.item, quantity: order.quantity,
+      date: order.date, notes: order.notes, ingredients: order.ingredients,
+      completed: order.completed
+    })
+  });
+}
+async function deleteOrderDb(id) {
+  await sbFetch('orders?id=eq.' + id, { method: 'DELETE' });
+}
+
+// ---- RECIPES ----
+async function getRecipes() {
+  try {
+    const data = await sbFetch('recipes?order=name.asc');
+    return (data || []).map(r => ({ ...r, yieldNum: r.yield_num, yieldUnit: r.yield_unit }));
+  } catch(e) { console.error('getRecipes:', e); return JSON.parse(localStorage.getItem('bake_recipes') || '[]'); }
+}
+async function saveRecipeDb(recipe) {
+  await sbFetch('recipes', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({
+      id: recipe.id, name: recipe.name,
+      yield_num: recipe.yieldNum, yield_unit: recipe.yieldUnit,
+      ingredients: recipe.ingredients
+    })
+  });
+}
+async function deleteRecipeDb(id) {
+  await sbFetch('recipes?id=eq.' + id, { method: 'DELETE' });
+}
+
+// ---- LIBRARY ----
+async function getIngLib() {
+  try {
+    const data = await sbFetch("library?type=eq.ingredient&order=value.asc&select=value");
+    const vals = (data || []).map(r => r.value);
+    return vals.length ? vals : DEFAULT_INGREDIENTS;
+  } catch(e) { return JSON.parse(localStorage.getItem('bake_ing_lib') || JSON.stringify(DEFAULT_INGREDIENTS)); }
+}
+async function getUnitLib() {
+  try {
+    const data = await sbFetch("library?type=eq.unit&order=value.asc&select=value");
+    const vals = (data || []).map(r => r.value);
+    return vals.length ? vals : DEFAULT_UNITS;
+  } catch(e) { return JSON.parse(localStorage.getItem('bake_unit_lib') || JSON.stringify(DEFAULT_UNITS)); }
+}
+async function addToIngLib(name) {
+  if (!name) return;
+  await sbFetch('library', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=ignore-duplicates' },
+    body: JSON.stringify({ type: 'ingredient', value: name.toLowerCase().trim() })
+  }).catch(() => {});
+}
+async function addToUnitLib(unit) {
+  if (!unit) return;
+  await sbFetch('library', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=ignore-duplicates' },
+    body: JSON.stringify({ type: 'unit', value: unit.toLowerCase().trim() })
+  }).catch(() => {});
+}
+async function removeLibItemDb(type, value) {
+  await sbFetch('library?type=eq.' + type + '&value=eq.' + encodeURIComponent(value), { method: 'DELETE' });
+}
+
+
+// ========== STORAGE ==========
+// Orders, recipes, and library are handled by Supabase async functions above
+const getApiKey = () => localStorage.getItem('bake_api_key') || '';
+// Legacy sync wrappers removed - using async Supabase functions
+
+const DEFAULT_INGREDIENTS = ['organic unbleached all-purpose flour','organic whole wheat flour','organic bread flour','organic cake flour','organic almond flour','organic oat flour','organic spelt flour','organic rye flour','organic buckwheat flour','organic coconut flour','organic arrowroot powder','organic tapioca starch','organic coconut sugar','organic raw cane sugar','organic powdered coconut sugar','organic maple syrup','raw local honey','organic molasses','organic medjool dates','organic date paste','organic agave nectar','organic grass-fed butter','organic coconut oil','organic extra virgin olive oil','organic avocado oil','organic whole milk','organic heavy cream','organic buttermilk','organic sour cream','organic cream cheese','organic plain yogurt','organic full-fat coconut milk','organic coconut cream','pasture-raised eggs','organic baking soda','aluminum-free baking powder','fine sea salt','himalayan pink salt','active dry yeast','instant yeast','organic apple cider vinegar','pure vanilla extract','organic vanilla bean paste','organic vanilla beans','organic almond extract','organic lemon extract','organic rose water','organic orange blossom water','organic raw cacao powder','organic cocoa powder','organic dark chocolate chips','organic semi-sweet chocolate chips','organic 70% dark chocolate','organic cacao nibs','organic carob powder','organic raw almonds','organic walnuts','organic pecans','organic cashews','organic hazelnuts','organic pumpkin seeds','organic sunflower seeds','organic chia seeds','organic flaxseeds','organic hemp seeds','organic shredded coconut','organic coconut flakes','organic raisins','organic dried cranberries','organic dried blueberries','organic dried cherries','organic rolled oats','organic quick oats','organic steel cut oats','organic ceylon cinnamon','organic nutmeg','organic ground ginger','organic cardamom','organic cloves','organic allspice','organic turmeric','organic lavender','organic matcha powder','organic lemon juice','organic lemon zest','organic orange zest','organic lime zest','organic freeze-dried strawberries','organic freeze-dried raspberries','organic freeze-dried blueberries','organic psyllium husk','organic ground flaxseed','aquafaba','organic espresso powder','organic maca powder','organic bee pollen','organic lucuma powder'];
+const DEFAULT_UNITS = ['cup','cups','tsp','tbsp','oz','g','kg','lb','ml','l','pieces','pinch','stick','sticks','dozen','whole'];
+
+// getIngLib, getUnitLib, addToIngLib, addToUnitLib handled by Supabase above
+
+// addToIngLib, addToUnitLib handled by Supabase above
+
+// ========== TABS ==========
+const TAB_NAMES = ['new-order','orders','shopping','recipes','library'];
+async function showTab(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
+  document.querySelectorAll('.tab')[TAB_NAMES.indexOf(name)].classList.add('active');
+  if (name==='orders')    await renderOrders();
+  if (name==='shopping')  await renderShopping();
+  if (name==='recipes')   await renderRecipes();
+  if (name==='library')   await renderLibrary();
+  if (name==='new-order') await populateRecipeDropdown();
+}
+
+// ========== SETTINGS ==========
+function openSettings()  { document.getElementById('api-key-input').value=getApiKey(); document.getElementById('settings-modal').classList.add('open'); }
+function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
+function saveSettings()  { localStorage.setItem('bake_api_key', document.getElementById('api-key-input').value.trim()); closeSettings(); toast('Settings saved!'); }
+
+// ========== AUTOCOMPLETE ENGINE ==========
+function makeAutocomplete(input, getSuggestions, onSave) {
+  let highlighted = -1;
+  let dropdown = document.createElement('div');
+  dropdown.className = 'ac-dropdown';
+  input.parentNode.appendChild(dropdown);
+
+  function getItems() {
+    const q = input.value.trim().toLowerCase();
+    if (!q) return [];
+    const all = getSuggestions();
+    const matches = all.filter(s => s.includes(q));
+    const exact = all.includes(q);
+    const items = matches.slice(0, 8);
+    if (!exact && q.length > 1) items.push('__new__:' + q);
+    return items;
+  }
+
+  function render() {
+    const items = getItems();
+    if (!items.length) { dropdown.classList.remove('open'); return; }
+    highlighted = -1;
+    dropdown.innerHTML = items.map((item, i) => {
+      if (item.startsWith('__new__:')) {
+        const val = item.slice(8);
+        return `<div class="ac-item new-item" data-val="${val}">+ Add "${val}"</div>`;
+      }
+      return `<div class="ac-item" data-val="${item}">${item}</div>`;
+    }).join('');
+    dropdown.classList.add('open');
+    dropdown.querySelectorAll('.ac-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        select(el.dataset.val, el.classList.contains('new-item'));
+      });
+    });
+  }
+
+  function select(val, isNew) {
+    input.value = val;
+    dropdown.classList.remove('open');
+    highlighted = -1;
+    if (isNew && onSave) onSave(val);
+  }
+
+  function close() { dropdown.classList.remove('open'); highlighted = -1; }
+
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  input.addEventListener('blur', () => setTimeout(close, 150));
+  input.addEventListener('keydown', e => {
+    const items = dropdown.querySelectorAll('.ac-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlighted = Math.min(highlighted + 1, items.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlighted = Math.max(highlighted - 1, -1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlighted >= 0 && items[highlighted]) {
+        const el = items[highlighted];
+        select(el.dataset.val, el.classList.contains('new-item'));
+      } else {
+        // Enter with no selection = save current value as new
+        const val = input.value.trim();
+        if (val && onSave) onSave(val);
+        close();
+      }
+      return;
+    } else if (e.key === 'Escape') {
+      close(); return;
+    } else { highlighted = -1; }
+    items.forEach((el, i) => el.classList.toggle('highlighted', i === highlighted));
+  });
+}
+
+// ========== INGREDIENT ROW ==========
+function addIngredientRow(containerId, ing = {}) {
+  const container = document.getElementById(containerId);
+  const row = document.createElement('div');
+  row.className = 'ingredient-row';
+  row.innerHTML = `
+    <input type="number" placeholder="Amt" value="${ing.amount||''}" min="0" step="0.25" style="flex:0 0 70px;"/>
+    <div class="ac-wrap unit-wrap">
+      <input type="text" class="ac-input unit-input" placeholder="unit" value="${ing.unit||''}"/>
+    </div>
+    <div class="ac-wrap">
+      <input type="text" class="ac-input ing-input" placeholder="Ingredient" value="${ing.name||''}"/>
+    </div>
+    <button class="remove-ing" onclick="this.parentElement.remove()">×</button>`;
+  container.appendChild(row);
+
+  const unitInput = row.querySelector('.unit-input');
+  const ingInput  = row.querySelector('.ing-input');
+  let _cachedUnits = null, _cachedIngs = null;
+  getUnitLib().then(v => _cachedUnits = v);
+  getIngLib().then(v => _cachedIngs = v);
+  makeAutocomplete(unitInput, () => _cachedUnits || DEFAULT_UNITS, val => { addToUnitLib(val); _cachedUnits = null; toast('"' + val + '" saved to units!'); });
+  makeAutocomplete(ingInput,  () => _cachedIngs  || DEFAULT_INGREDIENTS, val => { addToIngLib(val);  _cachedIngs  = null; toast('"' + val + '" saved to ingredients!'); });
+}
+
+// ========== RECIPE DROPDOWN ==========
+async function populateRecipeDropdown() {
+  const sel = document.getElementById('recipe-select');
+  const recipes = await getRecipes();
+  sel.innerHTML = '<option value="">— Select a recipe —</option>';
+  recipes.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = `${r.name} (base: ${r.yieldNum} ${r.yieldUnit})`;
+    sel.appendChild(opt);
+  });
+}
+
+async function onRecipeSelect() {
+  const id = document.getElementById('recipe-select').value;
+  const scaleRow = document.getElementById('recipe-scale-row');
+  const useBtn   = document.getElementById('use-recipe-btn');
+  if (!id) { scaleRow.style.display='none'; useBtn.style.display='none'; return; }
+  const recipes = await getRecipes(); const recipe = recipes.find(r => r.id==id);
+  if (!recipe) return;
+  document.getElementById('recipe-qty-unit').textContent = recipe.yieldUnit;
+  document.getElementById('recipe-qty-num').value = recipe.yieldNum;
+  scaleRow.style.display = 'block';
+  useBtn.style.display = 'flex';
+}
+
+async function useRecipe() {
+  const id = document.getElementById('recipe-select').value;
+  const recipes = await getRecipes(); const recipe = recipes.find(r => r.id==id);
+  if (!recipe) return;
+  const qtyNum = parseFloat(document.getElementById('recipe-qty-num').value)||1;
+  const scale  = qtyNum / recipe.yieldNum;
+  fillForm({
+    client:'', item: recipe.name,
+    quantity: `${qtyNum} ${recipe.yieldUnit}`,
+    date:'', notes:'',
+    ingredients: recipe.ingredients.map(i => ({ name:i.name, amount: Math.round(parseFloat(i.amount)*scale*100)/100, unit:i.unit }))
+  }, false);
+}
+
+// ========== PARSE (AI) ==========
+async function parseMessage() {
+  const msg = document.getElementById('client-msg').value.trim();
+  if (!msg) { toast('Paste a client message first!'); return; }
+
+  const btn = document.getElementById('parse-btn');
+  document.getElementById('parse-btn-text').innerHTML = '<span class="spinner"></span> Parsing...';
+  btn.disabled = true;
+
+  const today   = new Date().toISOString().split('T')[0];
+  const recipes = await getRecipes();
+  const recipeList = recipes.length
+    ? 'Known recipes: ' + recipes.map(r=>`"${r.name}" (base: ${r.yieldNum} ${r.yieldUnit})`).join(', ')
+    : 'No saved recipes.';
+
+  try {
+    const data = await callClaude({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        messages: [{ role:'user', content:
+`You are a baker's assistant. Extract order details and respond ONLY with raw JSON — no markdown, no backticks, no explanation.
+
+Today: ${today}
+${recipeList}
+
+If the order matches a known recipe (even loosely), set matched_recipe to that exact recipe name and leave ingredients empty — the app will scale from the library. If no match, provide realistic scaled ingredients.
+
+Message: """${msg}"""
+
+JSON:
+{
+  "client": "name or Unknown",
+  "item": "what was ordered",
+  "quantity": "e.g. 2 dozen",
+  "quantityNum": 2,
+  "quantityUnit": "dozen",
+  "date": "YYYY-MM-DD",
+  "notes": "special requests or empty string",
+  "matched_recipe": "exact recipe name or null",
+  "ingredients": []
+}` }]
+      });
+    let text = data.content[0].text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
+    const parsed = JSON.parse(text);
+
+    let matched = false;
+    if (parsed.matched_recipe) {
+      const recipe = recipes.find(r => r.name.toLowerCase()===parsed.matched_recipe.toLowerCase());
+      if (recipe) {
+        const scale = (parseFloat(parsed.quantityNum)||1) / recipe.yieldNum;
+        parsed.ingredients = recipe.ingredients.map(i => ({ name:i.name, amount: Math.round(parseFloat(i.amount)*scale*100)/100, unit:i.unit }));
+        matched = true;
+      }
+    }
+    fillForm(parsed, matched);
+  } catch(e) {
+    toast('Error: ' + e.message); console.error(e);
+  } finally {
+    document.getElementById('parse-btn-text').innerHTML = '✨ Parse with AI';
+    btn.disabled = false;
+  }
+}
+
+function fillForm(p, showBanner) {
+  document.getElementById('f-client').value = p.client   || '';
+  document.getElementById('f-item').value   = p.item     || '';
+  document.getElementById('f-qty').value    = p.quantity || '';
+  document.getElementById('f-date').value   = p.date     || '';
+  document.getElementById('f-notes').value  = p.notes    || '';
+  const list = document.getElementById('ingredients-list');
+  list.innerHTML = '';
+  (p.ingredients||[]).forEach(ing => addIngredientRow('ingredients-list', ing));
+  document.getElementById('recipe-match-banner').style.display = showBanner ? 'block' : 'none';
+  document.getElementById('parsed-preview').style.display = 'block';
+  document.getElementById('parsed-preview').scrollIntoView({ behavior:'smooth' });
+}
+
+function cancelParse() {
+  document.getElementById('parsed-preview').style.display = 'none';
+  document.getElementById('client-msg').value = '';
+  document.getElementById('recipe-select').value = '';
+  document.getElementById('recipe-scale-row').style.display = 'none';
+  document.getElementById('use-recipe-btn').style.display = 'none';
+}
+
+async function getIngRowData(containerId) {
+  const rows = document.querySelectorAll(`#${containerId} .ingredient-row`);
+  const ingredients = [];
+  for (const row of rows) {
+    const amt  = row.querySelector('input[type="number"]').value;
+    const unit = row.querySelector('.unit-input').value.trim();
+    const name = row.querySelector('.ing-input').value.trim();
+    if (name) {
+      await addToIngLib(name); await addToUnitLib(unit);
+      ingredients.push({ amount: amt, unit, name });
+    }
+  }
+  return ingredients;
+}
+
+async function saveOrder() {
+  const item = document.getElementById('f-item').value.trim();
+  if (!item) { toast('Please enter what was ordered!'); return; }
+  const ingredients = await getIngRowData('ingredients-list');
+  const order = {
+    id: Date.now(),
+    client:   document.getElementById('f-client').value.trim()||'Unknown',
+    item, quantity: document.getElementById('f-qty').value.trim(),
+    date:     document.getElementById('f-date').value,
+    notes:    document.getElementById('f-notes').value.trim(),
+    ingredients, completed: false, created: new Date().toISOString()
+  };
+  try {
+    await saveOrderDb(order);
+    toast('Order saved! 🎉');
+  } catch(e) { toast('Error saving order: ' + e.message); return; }
+  cancelParse(); showTab('orders');
+}
+
+// ========== ORDERS ==========
+let currentFilter = 'active';
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderOrders();
+}
+
+async function renderOrders() {
+  const el = document.getElementById('orders-list');
+  el.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>Loading orders...</p></div>';
+  const orders = await getOrders();
+  const today = new Date(); today.setHours(0,0,0,0);
+  let filtered = currentFilter==='active' ? orders.filter(o=>!o.completed) : currentFilter==='completed' ? orders.filter(o=>o.completed) : orders;
+  if (!filtered.length) { el.innerHTML=`<div class="empty-state"><div class="icon">🎂</div><p>No orders here yet.</p></div>`; return; }
+  filtered.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  el.innerHTML = filtered.map(o => {
+    const diff = Math.ceil((new Date(o.date)-today)/86400000);
+    let badge='', badgeClass='';
+    if (o.completed)  { badge='Done';           badgeClass='done'; }
+    else if (diff<0)  { badge='Overdue';         badgeClass='overdue'; }
+    else if (diff<=3) { badge=`Due in ${diff}d`; badgeClass='due-soon'; }
+    else              { badge=o.date?new Date(o.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'No date'; }
+    return `<div class="order-card ${o.completed?'completed':''}">
+      <div class="order-header">
+        <div>
+          <div class="order-name">${o.item}${o.quantity?' · '+o.quantity:''}</div>
+          <div class="order-client">👤 ${o.client}</div>
+          ${o.notes?`<div class="order-notes">📝 ${o.notes}</div>`:''}
+        </div>
+        <span class="badge ${badgeClass}">${badge}</span>
+      </div>
+      <div class="order-actions">
+        <button class="btn btn-secondary btn-sm" onclick="viewOrder(${o.id})">View</button>
+        ${!o.completed?`<button class="btn btn-success btn-sm" onclick="completeOrder(${o.id})">✓ Done</button>`:''}
+        ${!o.completed?`<button class="btn btn-secondary btn-sm" onclick="addToCalendar(${o.id})">📅 Calendar</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.id})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function completeOrder(id) { try { await updateOrder({id, completed:true}); } catch(e){} renderOrders(); toast('Order marked complete!'); }
+async function deleteOrder(id) { if(!confirm('Delete this order?'))return; try { await deleteOrderDb(id); } catch(e){} renderOrders(); renderShopping(); toast('Order deleted.'); }
+
+let viewingOrderId = null;
+async function viewOrder(id) {
+  const orders = await getOrders(); const o = orders.find(x=>x.id===id); if(!o)return;
+  viewingOrderId = id;
+  document.getElementById('view-title').textContent = o.item;
+  const ings = (o.ingredients||[]).map(i=>`<li>${i.amount} ${i.unit} ${i.name}</li>`).join('');
+  document.getElementById('view-body').innerHTML = `
+    <div style="display:grid; gap:10px; margin-bottom:12px;">
+      <div>
+        <label style="display:block; font-size:0.72rem; font-weight:600; color:var(--brown-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Client</label>
+        <input type="text" id="ve-client" value="${o.client||''}" style="width:100%;"/>
+      </div>
+      <div>
+        <label style="display:block; font-size:0.72rem; font-weight:600; color:var(--brown-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Item / Order</label>
+        <input type="text" id="ve-item" value="${o.item||''}" style="width:100%;"/>
+      </div>
+      <div>
+        <label style="display:block; font-size:0.72rem; font-weight:600; color:var(--brown-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Quantity</label>
+        <input type="text" id="ve-quantity" value="${o.quantity||''}" style="width:100%;"/>
+      </div>
+      <div>
+        <label style="display:block; font-size:0.72rem; font-weight:600; color:var(--brown-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Due Date</label>
+        <input type="date" id="ve-date" value="${o.date||''}" style="width:100%;"/>
+      </div>
+      <div>
+        <label style="display:block; font-size:0.72rem; font-weight:600; color:var(--brown-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Notes</label>
+        <input type="text" id="ve-notes" value="${o.notes||''}" placeholder="Allergies, flavors..." style="width:100%;"/>
+      </div>
+    </div>
+    <p style="font-size:0.78rem; font-weight:600; color:var(--brown-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Ingredients</p>
+    <ul style="padding-left:18px; font-size:0.9rem; line-height:1.8;">${ings||'<li>None listed</li>'}</ul>`;
+  const completeBtn = document.getElementById('view-complete-btn');
+  completeBtn.style.display = o.completed?'none':'inline-flex';
+  completeBtn.onclick = ()=>{ completeOrder(id); closeViewModal(); };
+  document.getElementById('view-save-btn').style.display = 'inline-flex';
+  document.getElementById('view-modal').classList.add('open');
+}
+
+async function saveViewEdits() {
+  const updated = {
+    id: viewingOrderId,
+    client:   document.getElementById('ve-client').value.trim() || 'Unknown',
+    item:     document.getElementById('ve-item').value.trim(),
+    quantity: document.getElementById('ve-quantity').value.trim(),
+    date:     document.getElementById('ve-date').value,
+    notes:    document.getElementById('ve-notes').value.trim(),
+  };
+  try { await updateOrder(updated); } catch(e) { toast('Error: ' + e.message); return; }
+  renderOrders();
+  closeViewModal();
+  toast('Order updated!');
+}
+
+function closeViewModal() { document.getElementById('view-modal').classList.remove('open'); }
+
+// ========== SHOPPING ==========
+async function renderShopping() {
+  const el = document.getElementById('shopping-list');
+  el.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>Loading...</p></div>';
+  const orders = (await getOrders()).filter(o=>!o.completed);
+  const map = {};
+  orders.forEach(o => (o.ingredients||[]).forEach(ing => {
+    const key = ing.name.toLowerCase();
+    if (!map[key]) map[key] = { name: ing.name, total: {}, orders: new Set() };
+    const unit = (ing.unit||'').toLowerCase().trim();
+    const amt  = parseFloat(ing.amount) || 0;
+    map[key].total[unit] = (map[key].total[unit] || 0) + amt;
+    map[key].orders.add(o.item);
+  }));
+  const keys = Object.keys(map);
+  if (!keys.length) { el.innerHTML=`<div class="empty-state"><div class="icon">🛒</div><p>No ingredients yet.</p></div>`; return; }
+  const checked = JSON.parse(localStorage.getItem('shopping_checked')||'{}');
+  el.innerHTML = `<div class="card">` + keys.sort().map(k => {
+    const item = map[k];
+    // Build consolidated amount string e.g. "3 cups" or "2 cups, 1 tbsp"
+    const amtStr = Object.entries(item.total)
+      .map(([unit, amt]) => {
+        const display = Number.isInteger(amt) ? amt : Math.round(amt * 100) / 100;
+        return unit ? `${display} ${unit}` : `${display}`;
+      }).join(', ');
+    const label = `${amtStr} ${item.name}`;
+    const isChecked = !!checked[k];
+    return `<div class="shop-item ${isChecked?'checked':''}">
+      <input type="checkbox" ${isChecked?'checked':''} onchange="toggleCheck('${k}',this)"/>
+      <span>${label}</span>
+    </div>`;
+  }).join('') + `</div>`;
+}
+function toggleCheck(key, el) {
+  const checked = JSON.parse(localStorage.getItem('shopping_checked')||'{}');
+  checked[key]=el.checked; localStorage.setItem('shopping_checked',JSON.stringify(checked));
+  el.closest('.shop-item').classList.toggle('checked',el.checked);
+}
+async function copyShoppingList() {
+  const orders=(await getOrders()).filter(o=>!o.completed), map={};
+  orders.forEach(o=>(o.ingredients||[]).forEach(ing=>{
+    const key=ing.name.toLowerCase();
+    if(!map[key])map[key]={name:ing.name,total:{}};
+    const unit=(ing.unit||'').toLowerCase().trim();
+    map[key].total[unit]=(map[key].total[unit]||0)+(parseFloat(ing.amount)||0);
+  }));
+  const text=Object.keys(map).sort().map(k=>{
+    const item=map[k];
+    const amtStr=Object.entries(item.total).map(([unit,amt])=>{
+      const d=Number.isInteger(amt)?amt:Math.round(amt*100)/100;
+      return unit?d+' '+unit:String(d);
+    }).join(', ');
+    return amtStr+' '+item.name;
+  }).join('\n');
+  navigator.clipboard.writeText(text).then(()=>toast('Copied!')).catch(()=>toast('Copy failed'));
+}
+
+
+async function importFromPaste() {
+  const text = document.getElementById('rm-paste-text').value.trim();
+  if (!text) { toast('Paste some ingredient text first!'); return; }
+  const status = document.getElementById('rm-fetch-status');
+  status.style.display = 'block';
+  status.style.color = 'var(--text-muted)';
+  status.textContent = 'Parsing pasted ingredients...';
+  try {
+    const lib = await getIngLib();
+    const libSample = lib.slice(0, 80).join(', ');
+    const prompt = 'Extract ingredients from this text and respond ONLY with raw JSON no markdown no backticks.\n\nKnown ingredient library (match to these where possible, preferring organic/natural names):\n' + libSample + '\n\nText: ' + text + '\n\nJSON:\n{"ingredients":[{"amount":"1","unit":"cup","name":"organic unbleached all-purpose flour"}]}';
+    const data = await callClaude({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] });
+    let raw = data.content[0].text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
+    const parsed = JSON.parse(raw);
+    const container = document.getElementById('rm-ingredients');
+    container.innerHTML = '';
+    for (const ing of (parsed.ingredients||[])) { addIngredientRow('rm-ingredients', ing); await addToIngLib(ing.name); await addToUnitLib(ing.unit); }
+    document.getElementById('rm-paste-text').value = '';
+    status.style.color = 'var(--green)';
+    status.textContent = '\u2713 Parsed ' + (parsed.ingredients||[]).length + ' ingredients!';
+  } catch(e) {
+    status.style.color = 'var(--rose)';
+    status.textContent = 'Error: ' + e.message;
+  }
+}
+
+// ========== RECIPES ==========
+let editingRecipeId = null;
+// ========== URL IMPORT ==========
+async function importFromUrl() {
+  const apiKey = getApiKey();
+  if (!apiKey) { openSettings(); toast('Enter your API key first!'); return; }
+
+  const url = document.getElementById('rm-url').value.trim();
+  if (!url) { toast('Paste a recipe URL first!'); return; }
+
+  const btn    = document.getElementById('rm-fetch-btn');
+  const status = document.getElementById('rm-fetch-status');
+  btn.disabled = true;
+  btn.textContent = 'Importing...';
+  status.style.display = 'block';
+  status.style.color = 'var(--text-muted)';
+  status.textContent = 'Fetching recipe page...';
+
+  try {
+    // Try multiple CORS proxies in sequence
+    const proxies = [
+      u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+      u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+      u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+    ];
+
+    let html = '';
+    let fetched = false;
+    for (const makeProxy of proxies) {
+      try {
+        const proxyRes = await fetch(makeProxy(url), { signal: AbortSignal.timeout(8000) });
+        if (!proxyRes.ok) continue;
+        const ct = proxyRes.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const j = await proxyRes.json();
+          html = j.contents || j.data || '';
+        } else {
+          html = await proxyRes.text();
+        }
+        if (html.length > 200) { fetched = true; break; }
+      } catch(e) { continue; }
+    }
+    if (!fetched) throw new Error('Could not fetch that page. The site may block scraping. Try copying the ingredient list and pasting it below instead.');
+
+    // Strip HTML tags to get plain text
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    // Remove scripts and styles
+    tmp.querySelectorAll('script,style,nav,header,footer,aside').forEach(el => el.remove());
+    const pageText = tmp.innerText || tmp.textContent || '';
+    // Trim to first 6000 chars to stay within token limits
+    const trimmed = pageText.slice(0, 6000);
+
+    if (!trimmed.trim()) throw new Error('Could not extract text from that page. Try a different recipe site.');
+
+    status.textContent = 'Extracting ingredients with AI...';
+
+    const lib = await getIngLib();
+    const libSample = lib.slice(0, 80).join(', ');
+
+    const data = await callClaude({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content:
+`You are a baker's assistant. Extract the recipe details from this page text and respond ONLY with raw JSON — no markdown, no backticks, no explanation.
+
+Known ingredient library (match to these where possible, preferring organic/natural equivalents):
+${libSample}
+
+For each ingredient:
+- Match the ingredient name to the closest item in the library if possible. If no close match, use the organic/natural equivalent name.
+- Extract the exact amount and unit from the recipe.
+- Use standard units: cup, tsp, tbsp, oz, g, lb, ml, pieces, pinch, whole.
+
+Page text:
+"""${trimmed}"""
+
+JSON:
+{
+  "name": "recipe name",
+  "yieldNum": 1,
+  "yieldUnit": "dozen or pieces or cake etc",
+  "ingredients": [
+    { "amount": "1", "unit": "cup", "name": "organic unbleached all-purpose flour" }
+  ]
+}` }]
+      });
+    let text = data.content[0].text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
+    const parsed = JSON.parse(text);
+
+    // Fill in the form
+    if (parsed.name) document.getElementById('rm-name').value = parsed.name;
+    if (parsed.yieldNum) document.getElementById('rm-yield-num').value = parsed.yieldNum;
+    if (parsed.yieldUnit) document.getElementById('rm-yield-unit').value = parsed.yieldUnit;
+
+    const container = document.getElementById('rm-ingredients');
+    container.innerHTML = '';
+    for (const ing of (parsed.ingredients||[])) { addIngredientRow('rm-ingredients', ing); await addToIngLib(ing.name); await addToUnitLib(ing.unit); }
+
+    status.style.color = 'var(--green)';
+    status.textContent = `✓ Imported ${(parsed.ingredients||[]).length} ingredients! Review and adjust below.`;
+    document.getElementById('rm-url').value = '';
+
+  } catch(e) {
+    status.style.color = 'var(--rose)';
+    status.textContent = 'Error: ' + e.message;
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Import';
+  }
+}
+
+async function openRecipeModal(id=null) {
+  editingRecipeId = id;
+  document.getElementById('recipe-modal-title').textContent = id?'Edit Recipe':'New Recipe';
+  document.getElementById('rm-ingredients').innerHTML='';
+  if (id) {
+    const recipes = await getRecipes(); const r = recipes.find(x=>x.id===id);
+    document.getElementById('rm-name').value=r.name;
+    document.getElementById('rm-yield-num').value=r.yieldNum;
+    document.getElementById('rm-yield-unit').value=r.yieldUnit;
+    (r.ingredients||[]).forEach(i=>addIngredientRow('rm-ingredients',i));
+  } else {
+    document.getElementById('rm-name').value='';
+    document.getElementById('rm-yield-num').value='1';
+    document.getElementById('rm-yield-unit').value='';
+    addIngredientRow('rm-ingredients');
+  }
+  document.getElementById('recipe-modal').classList.add('open');
+}
+function closeRecipeModal() { document.getElementById('recipe-modal').classList.remove('open'); }
+
+async function saveRecipe() {
+  const name=document.getElementById('rm-name').value.trim();
+  const yieldNum=parseFloat(document.getElementById('rm-yield-num').value)||1;
+  const yieldUnit=document.getElementById('rm-yield-unit').value.trim();
+  if (!name)     { toast('Recipe needs a name!'); return; }
+  if (!yieldUnit){ toast('Enter a yield unit (dozen, pieces, etc.)'); return; }
+  const ingredients = await getIngRowData('rm-ingredients');
+  const recipe = { id: editingRecipeId || Date.now(), name, yieldNum, yieldUnit, ingredients };
+  try { await saveRecipeDb(recipe); } catch(e) { toast('Error: ' + e.message); return; }
+  closeRecipeModal(); renderRecipes(); populateRecipeDropdown();
+  toast(editingRecipeId?'Recipe updated!':'Recipe saved! 🎉');
+}
+
+async function deleteRecipe(id) {
+  if(!confirm('Delete this recipe?'))return;
+  try { await deleteRecipeDb(id); } catch(e) { toast('Error: '+e.message); return; }
+  renderRecipes(); populateRecipeDropdown(); toast('Recipe deleted.');
+}
+
+async function renderRecipes() {
+  const el = document.getElementById('recipes-list');
+  el.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>Loading recipes...</p></div>';
+  const recipes=await getRecipes();
+  if(!recipes.length){ el.innerHTML=`<div class="empty-state"><div class="icon">📖</div><p>No recipes yet. Add your first one!</p></div>`; return; }
+  el.innerHTML=recipes.map(r=>{
+    const ings=(r.ingredients||[]).map(i=>`${i.amount} ${i.unit} ${i.name}`).join(', ');
+    return `<div class="recipe-card">
+      <div class="recipe-name">${r.name}</div>
+      <div class="recipe-yield">Base yield: ${r.yieldNum} ${r.yieldUnit}</div>
+      <div class="recipe-ing-list">${ings||'No ingredients listed'}</div>
+      <div class="recipe-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openRecipeModal(${r.id})">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRecipe(${r.id})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ========== LIBRARY TAB ==========
+async function renderLibrary() {
+  await renderLibTags('ingredient');
+  await renderLibTags('unit');
+}
+
+async function renderLibTags(type) {
+  const isIng = type === 'ingredient';
+  const lib   = isIng ? await getIngLib() : await getUnitLib();
+  const wrap  = document.getElementById(isIng ? 'ing-tags' : 'unit-tags');
+  wrap.innerHTML = lib.sort().map(item => `
+    <span class="lib-tag">
+      ${item}
+      <button onclick="removeLibItem('${type}','${item.replace(/'/g,"\\'")}')">×</button>
+    </span>`).join('');
+}
+
+async function addLibItem(type) {
+  const isIng = type === 'ingredient';
+  const input = document.getElementById(isIng ? 'new-ing-input' : 'new-unit-input');
+  const val   = input.value.trim().toLowerCase();
+  if (!val) return;
+  if (isIng) await addToIngLib(val); else await addToUnitLib(val);
+  input.value = '';
+  await renderLibTags(type);
+  toast(`"${val}" added!`);
+}
+
+async function removeLibItem(type, item) {
+  await removeLibItemDb(type, item);
+  await renderLibTags(type);
+}
+
+// ========== CALENDAR (.ics) ==========
+async function addToCalendar(id) {
+  const orders = await getOrders(); const o = orders.find(x => x.id === id);
+  if (!o) return;
+
+  // Parse the due date — treat it as the delivery day, all-day event
+  const dateStr = o.date || '';
+  if (!dateStr) { toast('No due date set for this order!'); return; }
+
+  // Build date strings for ICS (YYYYMMDD format for all-day events)
+  const [year, month, day] = dateStr.split('-');
+  const dtStart = `${year}${month}${day}`;
+  // End date for all-day = next day
+  const endDate = new Date(parseInt(year), parseInt(month)-1, parseInt(day)+1);
+  const dtEnd = `${endDate.getFullYear()}${String(endDate.getMonth()+1).padStart(2,'0')}${String(endDate.getDate()).padStart(2,'0')}`;
+
+  const now = new Date();
+  const stamp = now.toISOString().replace(/[-:.]/g,'').slice(0,15) + 'Z';
+  const uid = `bakeorder-${o.id}@bakeorders`;
+
+  const title = `${o.item}${o.quantity ? ' · ' + o.quantity : ''} — ${o.client}`;
+  const notes = [
+    o.client ? 'Client: ' + o.client : '',
+    o.quantity ? 'Quantity: ' + o.quantity : '',
+    o.notes ? 'Notes: ' + o.notes : '',
+    (o.ingredients||[]).length ? 'Ingredients: ' + o.ingredients.map(i=>`${i.amount} ${i.unit} ${i.name}`).join(', ') : ''
+  ].filter(Boolean).join('\n');
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Bake Orders//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${dtStart}`,
+    `DTEND;VALUE=DATE:${dtEnd}`,
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${notes.replace(/\n/g,'\\n')}`,
+    'STATUS:CONFIRMED',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  // On iOS, use data URI which triggers Calendar directly without downloading
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (isIOS) {
+    // data: URI with text/calendar MIME type opens Apple Calendar directly on iOS
+    const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+    const a = document.createElement('a');
+    a.href = dataUri;
+    a.click();
+    toast('Adding to Calendar...');
+  } else {
+    // Desktop — download the .ics file
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `bake-order-${o.id}.ics`;
+    a.click();
+    toast('Calendar file downloaded!');
+  }
+}
+
+// ========== PRICE COMPARISON ==========
+async function comparePrices() {
+  const apiKey = getApiKey();
+  if (!apiKey) { openSettings(); toast('Enter your API key first!'); return; }
+
+  const orders = (await getOrders()).filter(o => !o.completed);
+  const map = {};
+  orders.forEach(o => (o.ingredients||[]).forEach(ing => {
+    const key = ing.name.toLowerCase();
+    if (!map[key]) map[key] = { name: ing.name, total: {} };
+    const unit = (ing.unit||'').toLowerCase().trim();
+    map[key].total[unit] = (map[key].total[unit]||0) + (parseFloat(ing.amount)||0);
+  }));
+  const keys = Object.keys(map);
+  if (!keys.length) { toast('No ingredients to compare!'); return; }
+
+  const btn = document.getElementById('price-btn');
+  btn.textContent = '⏳ Fetching prices...';
+  btn.disabled = true;
+
+  const ingredientList = keys.map(k => {
+    const item = map[k];
+    const amtStr = Object.entries(item.total).map(([unit, amt]) => {
+      const d = Number.isInteger(amt) ? amt : Math.round(amt*100)/100;
+      return unit ? d+' '+unit : String(d);
+    }).join(', ');
+    return amtStr + ' ' + item.name;
+  }).join('\n');
+
+  const stores = ['Whole Foods', "Trader Joe's", 'Kroger', 'Aldi', 'Costco'];
+
+  const prompt = `You are a grocery pricing expert. Estimate typical current retail prices for organic/natural baking ingredients at each store listed below. Use your knowledge of each store's typical pricing for organic products.
+
+Ingredients needed:
+${ingredientList}
+
+Stores: ${stores.join(', ')}
+
+For each ingredient at each store, estimate a realistic price in USD. Consider:
+- Whole Foods: premium organic pricing
+- Trader Joe's: good value organic/natural
+- Kroger: mid-range, varies by organic vs conventional
+- Aldi: budget-friendly, limited organic selection (mark as "Not available" if unlikely to carry organic version)
+- Costco: bulk pricing, great for staples (mark as "Not available" if not typically sold there)
+
+Respond ONLY with raw JSON, no markdown, no backticks:
+{
+  "stores": {
+    "Whole Foods": {
+      "items": [
+        { "name": "ingredient name", "amount": "quantity", "price": 4.99, "note": "optional short note like 'per lb' or 'bulk bin'" }
+      ],
+      "total": 45.00
+    }
+  }
+}
+
+Be realistic with prices. If a store doesn't typically carry an organic version, set price to null and add note "May not carry organic".`;
+
+  try {
+    const data = await callClaude({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 3000,
+        messages: [{ role: 'user', content: prompt }]
+      });
+    let text = data.content[0].text.trim();
+    if (text.includes('```')) { const p = text.split('```'); text = (p[1]||p[0]).replace(/^json\n?/,'').trim(); }
+    const parsed = JSON.parse(text);
+
+    renderPriceResults(parsed, stores);
+    document.getElementById('price-results').style.display = 'block';
+    document.getElementById('price-results').scrollIntoView({ behavior: 'smooth' });
+
+  } catch(e) {
+    toast('Error: ' + e.message);
+    console.error(e);
+  } finally {
+    btn.textContent = '💰 Compare Prices';
+    btn.disabled = false;
+  }
+}
+
+function renderPriceResults(data, stores) {
+  const el = document.getElementById('store-lists');
+
+  // Find lowest total among stores with data
+  const totals = stores.map(s => ({ store: s, total: data.stores[s]?.total || Infinity }));
+  const minTotal = Math.min(...totals.map(t => t.total));
+
+  // For each ingredient, find the cheapest store
+  const bestPrices = {};
+  stores.forEach(s => {
+    (data.stores[s]?.items || []).forEach(item => {
+      const key = item.name.toLowerCase();
+      if (item.price !== null && (bestPrices[key] === undefined || item.price < bestPrices[key])) {
+        bestPrices[key] = item.price;
+      }
+    });
+  });
+
+  el.innerHTML = stores.map(store => {
+    const storeData = data.stores[store];
+    if (!storeData) return '';
+    const isLowest = storeData.total === minTotal;
+    const items = storeData.items || [];
+
+    const rows = items.map(item => {
+      const key = item.name.toLowerCase();
+      const isBest = item.price !== null && item.price === bestPrices[key];
+      const priceStr = item.price !== null ? '$' + item.price.toFixed(2) : '—';
+      return `<div class="price-row">
+        <span class="ing-name">${item.amount} ${item.name}${item.note ? `<br><span style="font-size:0.75rem;color:var(--text-muted)">${item.note}</span>` : ''}</span>
+        <span class="price ${isBest ? 'best' : ''}">${priceStr}${isBest && item.price !== null ? '<span class="best-badge">Best</span>' : ''}</span>
+      </div>`;
+    }).join('');
+
+    const totalStr = storeData.total ? '$' + storeData.total.toFixed(2) : '—';
+
+    return `<div class="store-card">
+      <div class="store-header">
+        <div class="store-name">${store} ${isLowest ? '🏆' : ''}</div>
+        <div class="store-total ${isLowest ? '' : ''}">${totalStr} est.</div>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+
+  el.innerHTML += `<p class="price-disclaimer">⚠️ Prices are AI estimates and may not reflect current local prices. Always verify in-store.</p>`;
+}
+
+// ========== EXPORT ==========
+async function exportCSV() {
+  const orders=await getOrders();
+  const rows=[['ID','Client','Item','Quantity','Date','Notes','Ingredients','Completed','Created']];
+  orders.forEach(o=>{
+    const ings=(o.ingredients||[]).map(i=>`${i.amount} ${i.unit} ${i.name}`).join('; ');
+    rows.push([o.id,o.client,o.item,o.quantity,o.date,o.notes,ings,o.completed,o.created]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`bake-orders-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click(); closeSettings(); toast('CSV exported!');
+}
+
+// ========== TOAST ==========
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ========== INIT ==========
+populateRecipeDropdown();
+if (!getApiKey()) setTimeout(openSettings, 500);
+// Seed library if empty
+(async()=>{ const lib = await getIngLib(); if(lib.length <= DEFAULT_INGREDIENTS.length) { for(const v of DEFAULT_INGREDIENTS) await addToIngLib(v); for(const v of DEFAULT_UNITS) await addToUnitLib(v); } })();
+</script>
+</body>
+</html>
